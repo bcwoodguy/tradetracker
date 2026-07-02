@@ -321,11 +321,11 @@ function sharePortfolio() {
 }
 
 // ─── API KEY + PORT NAME ──────────────────────────────────────────────────────
-function getApiKey(){ return localStorage.getItem('finnhub_key')||''; }
+const FINNHUB_KEY = 'd92ieopr01qs541uucl0d92ieopr01qs541uuclg';
+function getApiKey(){ return localStorage.getItem('finnhub_key') || FINNHUB_KEY; }
 function saveApiKey(){
-  const key = document.getElementById('api-key-input').value.trim();
-  if(!key){ alert('Enter your Finnhub key.'); return; }
-  localStorage.setItem('finnhub_key',key);
+  const key = document.getElementById('api-key-input').value.trim() || FINNHUB_KEY;
+  localStorage.setItem('finnhub_key', key);
   showTab('holdings');
   connectWS(key);
 }
@@ -633,8 +633,9 @@ function boot(){
   renderAll();
 
   const key=getApiKey();
-  if(key){ document.getElementById('api-key-input').value=key; connectWS(key); }
-  else { showTab('setup'); setStatus(''); }
+  document.getElementById('api-key-input').value=key;
+  showTab('holdings');
+  connectWS(key);
 }
 
 boot();
