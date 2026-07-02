@@ -266,7 +266,7 @@ const DEFAULT_POSITIONS = [
 ];
 
 let READ_ONLY = false;
-let state = {positions:[],closed:[],startCash:10000,name:'TradeTracker'};
+let state = {positions:[],closed:[],startCash:10000,cash:0,name:'TradeTracker'};
 let prices = {}, prevPrices = {};
 let ws = null, reconnTimer = null, pollTimer = null;
 let sellTarget = null;
@@ -286,10 +286,10 @@ function loadState() {
   // Load from localStorage
   const saved = localStorage.getItem('tradetracker_state');
   if (saved) {
-    try { state = JSON.parse(saved); return; } catch(e) {}
+    try { state = JSON.parse(saved); state.cash = state.cash || 0; return; } catch(e) {}
   }
   // First time — load defaults
-  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,name:'TradeTracker'};
+  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,cash:0,name:'TradeTracker'};
   saveState();
 }
 
@@ -467,8 +467,9 @@ async function confirmBuy(){
     state.positions.push({id:'u'+Date.now(),ticker,shares,basis:price,book});
     subscribeNew(ticker);
   }
+  state.cash = +(state.cash - shares * price).toFixed(4);
   saveState(); closeBuyModal(); renderAll();
-  showToast(`✅ Bought ${shares} ${ticker} @ ${USD(price)}`);
+  showToast(`✅ Bought ${shares} ${ticker} @ ${USD(price)} · Cash ${USD(state.cash)}`);
 }
 
 function openSellModal(posId){
@@ -512,8 +513,9 @@ function confirmSell(){
     pos.shares=+(pos.shares-shares).toFixed(6);
   }
 
+  state.cash = +(state.cash + exitPrice * shares).toFixed(4);
   saveState(); closeSellModal(); renderAll();
-  showToast(`Sold ${shares} ${pos.ticker} — ${USD(pnl,true)} P&L`);
+  showToast(`Sold ${shares} ${pos.ticker} — ${USD(pnl,true)} P&L · Cash +${USD(exitPrice*shares)}`);
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
@@ -561,14 +563,19 @@ function renderAll(){
   const other=state.positions.filter(p=>p.book==='other');
 
   document.getElementById('peace-holdings').innerHTML=peace.map(renderCard).join('');
-  document.getElementById('conflict-holdings').innerHTML=[...conflict,...other].map(renderCard).join('');
+  const cashRow = (state.cash && state.cash !== 0) ? `<div class="card" style="opacity:.8">
+    <div class="card-top"><span class="ticker">💵 CASH</span><span class="price">${USD(state.cash)}</span></div>
+    <div class="card-mid"><span class="label">Available to deploy</span></div>
+    <div class="card-bot"><button class="sell-btn" onclick="document.getElementById('buy-modal').style.display='flex'">Deploy →</button></div>
+  </div>` : '';
+  document.getElementById('conflict-holdings').innerHTML=[...conflict,...other].map(renderCard).join('') + cashRow;
 
   // Totals
   let totalPnl=0,pricesReady=0;
   state.positions.forEach(p=>{
     if(prices[p.ticker]!=null){ pricesReady++; totalPnl+=(prices[p.ticker]-p.basis)*p.shares; }
   });
-  const val=state.startCash+totalPnl;
+  const val=state.startCash+totalPnl+(state.cash||0);
   document.getElementById('total-value').textContent=USD(val);
 
   const badge=document.getElementById('total-pnl-badge');
