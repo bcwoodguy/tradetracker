@@ -196,6 +196,13 @@
       <button class="btn-full" onclick="savePortName()">Save Name</button>
     </div>
     <div class="setup-card">
+      <h2>End-of-day email summary</h2>
+      <p>Get a daily P&amp;L recap sent to your email at market close (~4 PM ET). Stored on this device only.</p>
+      <input class="api-input" type="email" id="email-input" placeholder="you@example.com"/>
+      <button class="btn-full" onclick="saveEmail()">Save Email</button>
+      <div id="email-status" style="font-size:.72rem;color:var(--muted);margin-top:.5rem;min-height:.9rem"></div>
+    </div>
+    <div class="setup-card">
       <h2>Reset portfolio</h2>
       <p>Clear all positions and closed trades. Starts fresh at $10,000.</p>
       <button class="btn-full" style="background:#dc2626" onclick="resetPortfolio()">Reset Everything</button>
@@ -326,6 +333,66 @@ function sharePortfolio() {
   } else {
     prompt('Copy this link:', url);
   }
+}
+
+// ─── EMAIL SUMMARY ────────────────────────────────────────────────────────────
+function saveEmail(){
+  const email = document.getElementById('email-input').value.trim();
+  const el = document.getElementById('email-status');
+  if(!email || !email.includes('@')){ el.textContent = '⚠️ Enter a valid email.'; return; }
+  localStorage.setItem('summary_email', email);
+  el.textContent = '✅ Saved — you\'ll get daily P&L at market close.';
+  showToast('Email saved: ' + email);
+}
+
+function buildEmailBody(){
+  let totalPnl=0, lines=[];
+  state.positions.forEach(p=>{
+    if(prices[p.ticker]==null) return;
+    const pnl=(prices[p.ticker]-p.basis)*p.shares;
+    const pct=((prices[p.ticker]-p.basis)/p.basis*100).toFixed(2);
+    totalPnl+=pnl;
+    lines.push(`${p.ticker}: ${pnl>=0?'+':''}$${pnl.toFixed(2)} (${pct}%)`);
+  });
+  const realized=state.closed.reduce((s,c)=>s+c.pnl,0);
+  const portVal=(state.startCash+totalPnl+(state.cash||0)).toFixed(2);
+  const subject=`TradeTracker EOD — Portfolio $${portVal} | Unrealized ${totalPnl>=0?'+':''}$${totalPnl.toFixed(2)}`;
+  const body=[
+    `📊 End-of-Day Portfolio Summary`,
+    `Date: ${new Date().toLocaleDateString()}`,
+    ``,
+    `Portfolio Value: $${portVal}`,
+    `Unrealized P&L: ${totalPnl>=0?'+':''}$${totalPnl.toFixed(2)}`,
+    `Realized P&L: ${realized>=0?'+':''}$${realized.toFixed(2)}`,
+    `Cash on hand: $${(state.cash||0).toFixed(2)}`,
+    ``,
+    `── Positions ──`,
+    ...lines,
+    ``,
+    `⚠️ MOCK / PAPER TRADE ONLY`,
+  ].join('\n');
+  return {subject, body};
+}
+
+function sendEodEmail(){
+  const email=localStorage.getItem('summary_email');
+  if(!email) return;
+  const {subject, body}=buildEmailBody();
+  // Opens native mail client as fallback — works on mobile & desktop
+  const mailto=`mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(mailto,'_blank');
+  showToast('Opening mail app…');
+}
+
+// Schedule EOD email at 4:05 PM local time
+function scheduleEodEmail(){
+  const email=localStorage.getItem('summary_email');
+  if(!email) return;
+  const now=new Date();
+  const eod=new Date(now); eod.setHours(16,5,0,0);
+  if(now>eod) eod.setDate(eod.getDate()+1); // already past, schedule tomorrow
+  const ms=eod-now;
+  setTimeout(()=>{ sendEodEmail(); scheduleEodEmail(); }, ms);
 }
 
 // ─── API KEY + PORT NAME ──────────────────────────────────────────────────────
@@ -698,6 +765,14 @@ function boot(){
 
   const key=getApiKey();
   document.getElementById('api-key-input').value=key;
+
+  const savedEmail=localStorage.getItem('summary_email');
+  if(savedEmail){
+    document.getElementById('email-input').value=savedEmail;
+    document.getElementById('email-status').textContent='✅ Active — daily P&L summary enabled.';
+    scheduleEodEmail();
+  }
+
   showTab('holdings');
   connectWS(key);
 }
