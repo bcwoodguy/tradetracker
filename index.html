@@ -171,6 +171,13 @@
       <div class="sc full"><div class="sl">Worst mover</div><div class="sv neg" id="s-worst">—</div></div>
     </div>
     <div class="thesis"><h3>Trade Thesis</h3><p id="thesis-text">Iran war barbell: LONG tech for the peace/ceasefire rally. LONG defense & energy for ongoing conflict. One side always makes money.</p></div>
+
+    <div style="margin-top:.75rem">
+      <div class="slabel-row"><span>📋 All Trades</span></div>
+      <div id="s-trade-log"></div>
+      <div id="s-trade-empty" style="font-size:.72rem;color:var(--muted);text-align:center;padding:.75rem 0"></div>
+    </div>
+
     <p class="disc">⚠️ MOCK / PAPER TRADE ONLY — not real money, not financial advice.</p>
   </div>
 
@@ -619,6 +626,41 @@ function renderSummary(){
   document.getElementById('s-realized').className='sv '+cls(realized);
   document.getElementById('s-best').textContent=best?`${best.ticker}  ${USD(best.pnl,true)}`:'—';
   document.getElementById('s-worst').textContent=worst?`${worst.ticker}  ${USD(worst.pnl,true)}`:'—';
+
+  // Trade log — open positions (buys) + closed trades (sells)
+  const log=document.getElementById('s-trade-log');
+  const emp=document.getElementById('s-trade-empty');
+  const allTrades=[
+    ...state.positions.map(p=>({
+      type:'BUY', ticker:p.ticker, shares:p.shares, price:p.basis, book:p.book,
+      pnl: prices[p.ticker]!=null?(prices[p.ticker]-p.basis)*p.shares:null,
+      current: prices[p.ticker]||null
+    })),
+    ...state.closed.map(c=>({
+      type:'SELL', ticker:c.ticker, shares:c.shares, price:c.exitPrice,
+      basis:c.basis, pnl:c.pnl, date:c.exitAt
+    }))
+  ];
+  if(!allTrades.length){ emp.textContent='No trades yet.'; log.innerHTML=''; return; }
+  emp.textContent='';
+  log.innerHTML=allTrades.map(t=>{
+    const isBuy=t.type==='BUY';
+    const pnlStr=t.pnl!=null?USD(t.pnl,true):'—';
+    const pnlCls=t.pnl!=null?cls(t.pnl):'neu';
+    const badge=isBuy
+      ?`<span style="font-size:.55rem;font-weight:700;padding:.1rem .4rem;border-radius:4px;background:var(--gdim);color:var(--green)">BUY</span>`
+      :`<span style="font-size:.55rem;font-weight:700;padding:.1rem .4rem;border-radius:4px;background:var(--rdim);color:var(--red)">SELL</span>`;
+    const sub=isBuy
+      ?`${t.shares} sh @ ${USD(t.price)} · current ${t.current?USD(t.current):'—'}`
+      :`${t.shares} sh @ ${USD(t.price)} · basis ${USD(t.basis)}${t.date?' · '+t.date:''}`;
+    return `<div class="closed-card">
+      <div class="cc-left">
+        <div class="cc-ticker">${badge} ${t.ticker}</div>
+        <div class="cc-detail">${sub}</div>
+      </div>
+      <div class="cc-pnl ${pnlCls}">${pnlStr}</div>
+    </div>`;
+  }).join('');
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
