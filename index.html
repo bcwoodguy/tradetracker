@@ -428,12 +428,26 @@ function openBuyModal(){
 }
 function closeBuyModal(){ document.getElementById('buy-modal').style.display='none'; }
 
-function confirmBuy(){
+async function confirmBuy(){
   const ticker=(document.getElementById('b-ticker').value||'').toUpperCase().trim();
   const shares=parseFloat(document.getElementById('b-shares').value);
   const price=parseFloat(document.getElementById('b-price').value);
   const book=document.getElementById('b-book').value;
   if(!ticker||isNaN(shares)||shares<=0||isNaN(price)||price<=0){ showToast('Fill all fields.'); return; }
+
+  // Validate ticker is publicly traded
+  showToast(`Checking ${ticker}…`);
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_KEY}`);
+    const d = await r.json();
+    if(!d || !d.c || d.c === 0){
+      showToast(`⚠️ ${ticker} not found — must be a public stock (NYSE/NASDAQ)`);
+      return;
+    }
+  } catch(e) {
+    showToast(`⚠️ Could not verify ${ticker} — check your connection`);
+    return;
+  }
 
   // Merge into existing position or add new
   const existing=state.positions.find(p=>p.ticker===ticker&&p.book===book);
@@ -446,7 +460,7 @@ function confirmBuy(){
     subscribeNew(ticker);
   }
   saveState(); closeBuyModal(); renderAll();
-  showToast(`Bought ${shares} ${ticker} @ ${USD(price)}`);
+  showToast(`✅ Bought ${shares} ${ticker} @ ${USD(price)}`);
 }
 
 function openSellModal(posId){
