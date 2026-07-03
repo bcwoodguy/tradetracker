@@ -763,6 +763,56 @@ function renderSummary(){
   }).join('');
 }
 
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+function requestNotifPermission(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='default') Notification.requestPermission();
+}
+
+function sendNotif(title, body){
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  new Notification(title, {body, icon: '/favicon.ico', badge: '/favicon.ico'});
+}
+
+function msUntilET(h, m){
+  const now = new Date();
+  const jan = new Date(now.getFullYear(),0,1);
+  const jul = new Date(now.getFullYear(),6,1);
+  const isDST = now.getTimezoneOffset() < Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+  const etOffset = isDST ? -4 : -5;
+  const etNow = new Date(now.getTime() + (now.getTimezoneOffset() + etOffset*60)*60000);
+  const target = new Date(etNow); target.setHours(h,m,0,0);
+  if(etNow >= target) target.setDate(target.getDate()+1);
+  return target - etNow;
+}
+
+function scheduleMarketNotifications(){
+  // Opening bell 9:30 AM ET — weekdays only
+  const msOpen = msUntilET(9,30);
+  setTimeout(()=>{
+    const now = new Date();
+    if(now.getDay()>0 && now.getDay()<6){ // Mon–Fri
+      saveOpenSnapshot();
+      updateDayChangeBadge();
+      const val = currentPortfolioValue();
+      sendNotif('🔔 Market Open — TradeTracker', `Portfolio: $${val.toFixed(2)} · Bell just rang`);
+    }
+    scheduleMarketNotifications();
+  }, msOpen);
+
+  // Closing bell 4:00 PM ET
+  const msClose = msUntilET(16,0);
+  setTimeout(()=>{
+    const now = new Date();
+    if(now.getDay()>0 && now.getDay()<6){
+      saveCloseSnapshot();
+      updateDayChangeBadge();
+      const val = currentPortfolioValue();
+      sendNotif('🔔 Market Close — TradeTracker', `Portfolio: $${val.toFixed(2)} · Market closed`);
+    }
+  }, msClose);
+}
+
 // ─── DAILY SNAPSHOT ───────────────────────────────────────────────────────────
 function currentPortfolioValue(){
   let totalPnl=0;
@@ -818,26 +868,6 @@ function updateDayChangeBadge(){
   badge.style.display='';
 }
 
-// Schedule market open (9:30 AM) and close (4:00 PM) ET snapshots
-function scheduleMarketSnapshots(){
-  function msUntilET(h,m){
-    const now=new Date();
-    // ET offset: UTC-5 (EST) or UTC-4 (EDT)
-    const jan=new Date(now.getFullYear(),0,1);
-    const jul=new Date(now.getFullYear(),6,1);
-    const stdOffset=Math.max(jan.getTimezoneOffset(),jul.getTimezoneOffset());
-    const isDST=now.getTimezoneOffset()<stdOffset;
-    const etOffset=isDST?-4:-5;
-    const etNow=new Date(now.getTime()+(now.getTimezoneOffset()+etOffset*60)*60000);
-    const target=new Date(etNow); target.setHours(h,m,0,0);
-    if(etNow>=target) target.setDate(target.getDate()+1);
-    return target-etNow;
-  }
-  // Market open: 9:30 AM ET
-  setTimeout(()=>{ saveOpenSnapshot(); updateDayChangeBadge(); scheduleMarketSnapshots(); }, msUntilET(9,30));
-  // Market close: 4:00 PM ET
-  setTimeout(()=>{ saveCloseSnapshot(); updateDayChangeBadge(); }, msUntilET(16,0));
-}
 
 function renderCashLedger(){
   const el=document.getElementById('s-cash-ledger');
@@ -929,7 +959,8 @@ function boot(){
     scheduleEodEmail();
   }
 
-  scheduleMarketSnapshots();
+  requestNotifPermission();
+  scheduleMarketNotifications();
 
   showTab('holdings');
   connectWS(key);
