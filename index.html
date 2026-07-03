@@ -126,6 +126,7 @@
       <div class="pnl-row">
         <span class="badge neu" id="total-pnl-badge">— awaiting prices</span>
         <span class="badge realized" id="realized-badge" style="display:none"></span>
+        <span class="badge neu" id="day-change-badge" style="display:none"></span>
       </div>
     </div>
     <div class="status-wrap">
@@ -176,6 +177,18 @@
       <div class="slabel-row"><span>📋 All Trades</span></div>
       <div id="s-trade-log"></div>
       <div id="s-trade-empty" style="font-size:.72rem;color:var(--muted);text-align:center;padding:.75rem 0"></div>
+    </div>
+
+    <div style="margin-top:.75rem">
+      <div class="slabel-row"><span>💵 Cash Ledger</span></div>
+      <div id="s-cash-ledger"></div>
+      <div id="s-cash-ledger-empty" style="font-size:.72rem;color:var(--muted);text-align:center;padding:.75rem 0"></div>
+    </div>
+
+    <div style="margin-top:.75rem">
+      <div class="slabel-row"><span>📅 Daily Snapshots</span></div>
+      <div id="s-snapshots"></div>
+      <div id="s-snapshots-empty" style="font-size:.72rem;color:var(--muted);text-align:center;padding:.75rem 0"></div>
     </div>
 
     <p class="disc">⚠️ MOCK / PAPER TRADE ONLY — not real money, not financial advice.</p>
@@ -273,7 +286,7 @@ const DEFAULT_POSITIONS = [
 ];
 
 let READ_ONLY = false;
-let state = {positions:[],closed:[],startCash:10000,cash:0,name:'TradeTracker'};
+let state = {positions:[],closed:[],startCash:10000,cash:0,cashLedger:[],snapshots:[],name:'TradeTracker'};
 let prices = {}, prevPrices = {};
 let ws = null, reconnTimer = null, pollTimer = null;
 let sellTarget = null;
@@ -293,10 +306,16 @@ function loadState() {
   // Load from localStorage
   const saved = localStorage.getItem('tradetracker_state');
   if (saved) {
-    try { state = JSON.parse(saved); state.cash = state.cash || 0; return; } catch(e) {}
+    try {
+      state = JSON.parse(saved);
+      state.cash = state.cash || 0;
+      state.cashLedger = state.cashLedger || [];
+      state.snapshots = state.snapshots || [];
+      return;
+    } catch(e) {}
   }
   // First time — load defaults
-  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,cash:0,name:'TradeTracker'};
+  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,cash:0,cashLedger:[],snapshots:[],name:'TradeTracker'};
   saveState();
 }
 
@@ -534,7 +553,9 @@ async function confirmBuy(){
     state.positions.push({id:'u'+Date.now(),ticker,shares,basis:price,book});
     subscribeNew(ticker);
   }
-  state.cash = +(state.cash - shares * price).toFixed(4);
+  const cost = +(shares * price).toFixed(4);
+  state.cash = +(state.cash - cost).toFixed(4);
+  state.cashLedger.push({at:new Date().toISOString(),type:'BUY',ticker,shares,price,amount:-cost,balance:state.cash});
   saveState(); closeBuyModal(); renderAll();
   showToast(`✅ Bought ${shares} ${ticker} @ ${USD(price)} · Cash ${USD(state.cash)}`);
 }
@@ -580,9 +601,11 @@ function confirmSell(){
     pos.shares=+(pos.shares-shares).toFixed(6);
   }
 
-  state.cash = +(state.cash + exitPrice * shares).toFixed(4);
+  const proceeds = +(exitPrice * shares).toFixed(4);
+  state.cash = +(state.cash + proceeds).toFixed(4);
+  state.cashLedger.push({at:new Date().toISOString(),type:'SELL',ticker:pos.ticker,shares,price:exitPrice,amount:proceeds,balance:state.cash});
   saveState(); closeSellModal(); renderAll();
-  showToast(`Sold ${shares} ${pos.ticker} — ${USD(pnl,true)} P&L · Cash +${USD(exitPrice*shares)}`);
+  showToast(`Sold ${shares} ${pos.ticker} — ${USD(pnl,true)} P&L · Cash +${USD(proceeds)}`);
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
@@ -660,6 +683,7 @@ function renderAll(){
 
   document.getElementById('last-updated').textContent=
     `${pricesReady}/${state.positions.length} prices · ${new Date().toLocaleTimeString()}`;
+  updateDayChangeBadge();
 }
 
 function renderClosed(){
@@ -715,6 +739,8 @@ function renderSummary(){
       basis:c.basis, pnl:c.pnl, date:c.exitAt
     }))
   ];
+  renderCashLedger();
+  renderSnapshots();
   if(!allTrades.length){ emp.textContent='No trades yet.'; log.innerHTML=''; return; }
   emp.textContent='';
   log.innerHTML=allTrades.map(t=>{
@@ -733,6 +759,136 @@ function renderSummary(){
         <div class="cc-detail">${sub}</div>
       </div>
       <div class="cc-pnl ${pnlCls}">${pnlStr}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── DAILY SNAPSHOT ───────────────────────────────────────────────────────────
+function currentPortfolioValue(){
+  let totalPnl=0;
+  state.positions.forEach(p=>{
+    if(prices[p.ticker]!=null) totalPnl+=(prices[p.ticker]-p.basis)*p.shares;
+  });
+  return +(state.startCash+totalPnl+(state.cash||0)).toFixed(2);
+}
+
+function saveCloseSnapshot(){
+  const today=new Date().toLocaleDateString();
+  // Replace existing snapshot for today if already saved
+  state.snapshots=state.snapshots.filter(s=>s.date!==today);
+  state.snapshots.push({
+    date:today,
+    type:'close',
+    value:currentPortfolioValue(),
+    cash:state.cash||0,
+    positions:state.positions.length
+  });
+  // Keep last 90 days
+  if(state.snapshots.length>90) state.snapshots=state.snapshots.slice(-90);
+  saveState();
+  showToast('📸 Market close snapshot saved');
+}
+
+function saveOpenSnapshot(){
+  const today=new Date().toLocaleDateString();
+  const existing=state.snapshots.find(s=>s.date===today&&s.type==='open');
+  if(existing) return; // already saved today's open
+  state.snapshots.push({
+    date:today,
+    type:'open',
+    value:currentPortfolioValue(),
+    cash:state.cash||0
+  });
+  if(state.snapshots.length>180) state.snapshots=state.snapshots.slice(-180);
+  saveState();
+}
+
+function updateDayChangeBadge(){
+  const badge=document.getElementById('day-change-badge');
+  if(!badge) return;
+  // Find most recent close snapshot (yesterday or earlier)
+  const today=new Date().toLocaleDateString();
+  const prevClose=state.snapshots.slice().reverse().find(s=>s.type==='close'&&s.date!==today);
+  if(!prevClose){ badge.style.display='none'; return; }
+  const cur=currentPortfolioValue();
+  const diff=+(cur-prevClose.value).toFixed(2);
+  const pct=+((diff/prevClose.value)*100).toFixed(2);
+  badge.textContent=`Day ${diff>=0?'+':''}${USD(diff)} (${pct>=0?'+':''}${pct}%) vs ${prevClose.date} close`;
+  badge.className='badge '+(diff>=0?'pos':'neg');
+  badge.style.display='';
+}
+
+// Schedule market open (9:30 AM) and close (4:00 PM) ET snapshots
+function scheduleMarketSnapshots(){
+  function msUntilET(h,m){
+    const now=new Date();
+    // ET offset: UTC-5 (EST) or UTC-4 (EDT)
+    const jan=new Date(now.getFullYear(),0,1);
+    const jul=new Date(now.getFullYear(),6,1);
+    const stdOffset=Math.max(jan.getTimezoneOffset(),jul.getTimezoneOffset());
+    const isDST=now.getTimezoneOffset()<stdOffset;
+    const etOffset=isDST?-4:-5;
+    const etNow=new Date(now.getTime()+(now.getTimezoneOffset()+etOffset*60)*60000);
+    const target=new Date(etNow); target.setHours(h,m,0,0);
+    if(etNow>=target) target.setDate(target.getDate()+1);
+    return target-etNow;
+  }
+  // Market open: 9:30 AM ET
+  setTimeout(()=>{ saveOpenSnapshot(); updateDayChangeBadge(); scheduleMarketSnapshots(); }, msUntilET(9,30));
+  // Market close: 4:00 PM ET
+  setTimeout(()=>{ saveCloseSnapshot(); updateDayChangeBadge(); }, msUntilET(16,0));
+}
+
+function renderCashLedger(){
+  const el=document.getElementById('s-cash-ledger');
+  const emp=document.getElementById('s-cash-ledger-empty');
+  if(!state.cashLedger||state.cashLedger.length===0){
+    el.innerHTML=''; emp.textContent='No cash transactions yet.'; return;
+  }
+  emp.textContent='';
+  el.innerHTML=[...state.cashLedger].reverse().map(e=>{
+    const d=new Date(e.at);
+    const dateStr=d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const isIn=e.amount>0;
+    const badge=isIn
+      ?`<span style="font-size:.55rem;font-weight:700;padding:.1rem .4rem;border-radius:4px;background:var(--gdim);color:var(--green)">IN</span>`
+      :`<span style="font-size:.55rem;font-weight:700;padding:.1rem .4rem;border-radius:4px;background:var(--rdim);color:var(--red)">OUT</span>`;
+    return `<div class="closed-card">
+      <div class="cc-left">
+        <div class="cc-ticker">${badge} ${e.ticker} <span style="font-size:.6rem;color:var(--muted)">${e.type} ${e.shares} sh @ ${USD(e.price)}</span></div>
+        <div class="cc-detail">${dateStr} · Balance after: ${USD(e.balance)}</div>
+      </div>
+      <div class="cc-pnl ${isIn?'pos':'neg'}">${isIn?'+':''}${USD(Math.abs(e.amount))}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderSnapshots(){
+  const el=document.getElementById('s-snapshots');
+  const emp=document.getElementById('s-snapshots-empty');
+  if(!state.snapshots||state.snapshots.length===0){
+    el.innerHTML=''; emp.textContent='Snapshots saved at market open & close each day.'; return;
+  }
+  emp.textContent='';
+  // Group by date, show close + open pairs
+  const byDate={};
+  state.snapshots.forEach(s=>{ if(!byDate[s.date]) byDate[s.date]={}; byDate[s.date][s.type]=s; });
+  const dates=Object.keys(byDate).sort((a,b)=>new Date(b)-new Date(a));
+  el.innerHTML=dates.map(date=>{
+    const {open,close}=byDate[date];
+    const dayPnl=open&&close?+(close.value-open.value).toFixed(2):null;
+    const ref=close||open;
+    return `<div class="closed-card">
+      <div class="cc-left">
+        <div class="cc-ticker">${date}</div>
+        <div class="cc-detail">
+          ${open?`Open: ${USD(open.value)}`:''}
+          ${open&&close?' → ':''}
+          ${close?`Close: ${USD(close.value)}`:'(market open)'}
+          · Cash: ${USD(ref.cash)}
+        </div>
+      </div>
+      <div class="cc-pnl ${dayPnl!=null?(dayPnl>=0?'pos':'neg'):'neu'}">${dayPnl!=null?(dayPnl>=0?'+':'')+USD(Math.abs(dayPnl)):'—'}</div>
     </div>`;
   }).join('');
 }
@@ -772,6 +928,8 @@ function boot(){
     document.getElementById('email-status').textContent='✅ Active — daily P&L summary enabled.';
     scheduleEodEmail();
   }
+
+  scheduleMarketSnapshots();
 
   showTab('holdings');
   connectWS(key);
