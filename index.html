@@ -271,6 +271,10 @@
 
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
+// BOT_VERSION: bot increments this timestamp on every trade push.
+// If BOT_VERSION > state.botVersion, positions are merged from DEFAULT_POSITIONS.
+const BOT_VERSION = 1753142400; // 2026-07-22 — initial baseline
+
 const DEFAULT_POSITIONS = [
   {id:'p1',ticker:'NVDA', shares:7.324,basis:193.93,book:'peace'},
   {id:'p2',ticker:'AMZN', shares:4.980,basis:234.27,book:'peace'},
@@ -311,11 +315,40 @@ function loadState() {
       state.cash = state.cash || 0;
       state.cashLedger = state.cashLedger || [];
       state.snapshots = state.snapshots || [];
+      state.botVersion = state.botVersion || 0;
+
+      // Bot pushed new trades — merge positions, keep history
+      if (BOT_VERSION > state.botVersion) {
+        const prevTickers = state.positions.map(p => p.ticker);
+        const newTickers = DEFAULT_POSITIONS.map(p => p.ticker);
+        // Record bot trades into cashLedger for transparency
+        DEFAULT_POSITIONS.forEach(np => {
+          const old = state.positions.find(p => p.ticker === np.ticker);
+          if (!old) {
+            state.cashLedger.push({at:new Date().toISOString(),type:'BOT-BUY',ticker:np.ticker,shares:np.shares,price:np.basis,amount:-(np.shares*np.basis),balance:state.cash});
+          } else if (Math.abs(old.shares - np.shares) > 0.001) {
+            const diff = np.shares - old.shares;
+            const type = diff > 0 ? 'BOT-BUY' : 'BOT-SELL';
+            state.cashLedger.push({at:new Date().toISOString(),type,ticker:np.ticker,shares:Math.abs(diff),price:np.basis,amount:diff>0?-(Math.abs(diff)*np.basis):(Math.abs(diff)*np.basis),balance:state.cash});
+          }
+        });
+        // Log positions bot removed entirely
+        state.positions.forEach(old => {
+          if (!newTickers.includes(old.ticker)) {
+            state.cashLedger.push({at:new Date().toISOString(),type:'BOT-SELL',ticker:old.ticker,shares:old.shares,price:old.basis,amount:old.shares*old.basis,balance:state.cash});
+            state.closed.push({id:'c'+Date.now()+old.ticker,ticker:old.ticker,shares:old.shares,basis:old.basis,exitPrice:old.basis,exitAt:new Date().toLocaleDateString(),pnl:0,note:'Bot closed'});
+          }
+        });
+        state.positions = DEFAULT_POSITIONS.map(p=>({...p}));
+        state.botVersion = BOT_VERSION;
+        saveState();
+        console.log('Bot update applied:', BOT_VERSION);
+      }
       return;
     } catch(e) {}
   }
   // First time — load defaults
-  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,cash:0,cashLedger:[],snapshots:[],name:'TradeTracker'};
+  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,cash:0,cashLedger:[],snapshots:[],botVersion:BOT_VERSION,name:'TradeTracker'};
   saveState();
 }
 
