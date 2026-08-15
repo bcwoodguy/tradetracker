@@ -186,7 +186,13 @@
     </div>
 
     <div style="margin-top:.75rem">
-      <div class="slabel-row"><span>📅 Daily Snapshots</span></div>
+      <div class="slabel-row"><span>📅 Daily Journal</span></div>
+      <div id="s-journal"></div>
+      <div id="s-journal-empty" style="font-size:.72rem;color:var(--muted);text-align:center;padding:.75rem 0"></div>
+    </div>
+
+    <div style="margin-top:.75rem">
+      <div class="slabel-row"><span>📸 Daily Snapshots</span></div>
       <div id="s-snapshots"></div>
       <div id="s-snapshots-empty" style="font-size:.72rem;color:var(--muted);text-align:center;padding:.75rem 0"></div>
     </div>
@@ -317,32 +323,35 @@ function loadState() {
       state.snapshots = state.snapshots || [];
       state.botVersion = state.botVersion || 0;
 
-      // Bot pushed new trades — merge positions, keep history
+      // Bot pushed new trades — smart merge:
+      // Bot positions have ids like p1,p2... User-added have ids starting with 'u'
+      // Only update bot-managed positions; preserve user's own additions
       if (BOT_VERSION > state.botVersion) {
-        const prevTickers = state.positions.map(p => p.ticker);
-        const newTickers = DEFAULT_POSITIONS.map(p => p.ticker);
-        // Record bot trades into cashLedger for transparency
+        const botIds = new Set(DEFAULT_POSITIONS.map(p => p.id));
+        const userPositions = state.positions.filter(p => !p.id.startsWith('p'));
+
+        // Log what changed for cash ledger transparency
         DEFAULT_POSITIONS.forEach(np => {
-          const old = state.positions.find(p => p.ticker === np.ticker);
+          const old = state.positions.find(p => p.id === np.id);
           if (!old) {
             state.cashLedger.push({at:new Date().toISOString(),type:'BOT-BUY',ticker:np.ticker,shares:np.shares,price:np.basis,amount:-(np.shares*np.basis),balance:state.cash});
           } else if (Math.abs(old.shares - np.shares) > 0.001) {
             const diff = np.shares - old.shares;
-            const type = diff > 0 ? 'BOT-BUY' : 'BOT-SELL';
-            state.cashLedger.push({at:new Date().toISOString(),type,ticker:np.ticker,shares:Math.abs(diff),price:np.basis,amount:diff>0?-(Math.abs(diff)*np.basis):(Math.abs(diff)*np.basis),balance:state.cash});
+            state.cashLedger.push({at:new Date().toISOString(),type:diff>0?'BOT-BUY':'BOT-SELL',ticker:np.ticker,shares:Math.abs(diff),price:np.basis,amount:diff>0?-(Math.abs(diff)*np.basis):(Math.abs(diff)*np.basis),balance:state.cash});
           }
         });
-        // Log positions bot removed entirely
-        state.positions.forEach(old => {
-          if (!newTickers.includes(old.ticker)) {
+        // Log bot-removed positions (bot positions no longer in DEFAULT_POSITIONS)
+        state.positions.filter(p=>p.id.startsWith('p')).forEach(old => {
+          if (!botIds.has(old.id)) {
             state.cashLedger.push({at:new Date().toISOString(),type:'BOT-SELL',ticker:old.ticker,shares:old.shares,price:old.basis,amount:old.shares*old.basis,balance:state.cash});
             state.closed.push({id:'c'+Date.now()+old.ticker,ticker:old.ticker,shares:old.shares,basis:old.basis,exitPrice:old.basis,exitAt:new Date().toLocaleDateString(),pnl:0,note:'Bot closed'});
           }
         });
-        state.positions = DEFAULT_POSITIONS.map(p=>({...p}));
+        // Merge: bot positions from DEFAULT_POSITIONS + keep user's custom positions
+        state.positions = [...DEFAULT_POSITIONS.map(p=>({...p})), ...userPositions];
         state.botVersion = BOT_VERSION;
         saveState();
-        console.log('Bot update applied:', BOT_VERSION);
+        console.log('Bot update applied:', BOT_VERSION, '— user positions preserved:', userPositions.length);
       }
       return;
     } catch(e) {}
@@ -774,6 +783,7 @@ function renderSummary(){
   ];
   renderCashLedger();
   renderSnapshots();
+  renderJournal();
   if(!allTrades.length){ emp.textContent='No trades yet.'; log.innerHTML=''; return; }
   emp.textContent='';
   log.innerHTML=allTrades.map(t=>{
@@ -792,6 +802,110 @@ function renderSummary(){
         <div class="cc-detail">${sub}</div>
       </div>
       <div class="cc-pnl ${pnlCls}">${pnlStr}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── DAILY JOURNAL ────────────────────────────────────────────────────────────
+const JOURNAL_KEY = 'tradetracker_journal';
+
+function getJournal(){
+  try { return JSON.parse(localStorage.getItem(JOURNAL_KEY)||'[]'); } catch(e){ return []; }
+}
+
+function buildDayEntry(type){
+  const today = new Date().toLocaleDateString();
+  let totalPnl=0, peacePnl=0, confPnl=0, best=null, worst=null;
+  const posSnap = [];
+  state.positions.forEach(p=>{
+    const pr = prices[p.ticker];
+    if(pr==null) return;
+    const pnl = (pr-p.basis)*p.shares;
+    const pct = ((pr-p.basis)/p.basis*100);
+    totalPnl += pnl;
+    if(p.book==='peace') peacePnl+=pnl; else confPnl+=pnl;
+    if(!best||pnl>best.pnl) best={ticker:p.ticker,pnl,pct};
+    if(!worst||pnl<worst.pnl) worst={ticker:p.ticker,pnl,pct};
+    posSnap.push({ticker:p.ticker,shares:p.shares,basis:p.basis,price:pr,pnl:+pnl.toFixed(2),pct:+pct.toFixed(2),book:p.book});
+  });
+  const portVal = +(state.startCash+totalPnl+(state.cash||0)).toFixed(2);
+  // Trades made today
+  const todayTrades = state.closed.filter(c=>c.exitAt===today);
+  return {
+    date: today,
+    type,          // 'open' or 'close'
+    value: portVal,
+    cash: +(state.cash||0).toFixed(2),
+    totalPnl: +totalPnl.toFixed(2),
+    peacePnl: +peacePnl.toFixed(2),
+    confPnl: +confPnl.toFixed(2),
+    best: best ? {ticker:best.ticker, pnl:+best.pnl.toFixed(2), pct:+best.pct.toFixed(2)} : null,
+    worst: worst ? {ticker:worst.ticker, pnl:+worst.pnl.toFixed(2), pct:+worst.pct.toFixed(2)} : null,
+    positions: posSnap,
+    trades: todayTrades.length,
+    tradeDetails: todayTrades.map(c=>({ticker:c.ticker,shares:c.shares,pnl:c.pnl})),
+    ts: new Date().toISOString()
+  };
+}
+
+function saveJournalEntry(type){
+  const journal = getJournal();
+  const today = new Date().toLocaleDateString();
+  // Find existing entry for today of this type
+  const idx = journal.findIndex(e=>e.date===today && e.type===type);
+  const entry = buildDayEntry(type);
+  if(idx>=0) journal[idx]=entry; else journal.push(entry);
+  // Keep last 365 days
+  const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear()-1);
+  const pruned = journal.filter(e=>new Date(e.ts)>cutoff);
+  localStorage.setItem(JOURNAL_KEY, JSON.stringify(pruned));
+  return entry;
+}
+
+function renderJournal(){
+  const el = document.getElementById('s-journal');
+  const emp = document.getElementById('s-journal-empty');
+  const journal = getJournal();
+  if(!journal.length){ el.innerHTML=''; emp.textContent='End-of-day summaries will appear here after market close.'; return; }
+  emp.textContent='';
+
+  // Group open+close pairs by date
+  const byDate={};
+  journal.forEach(e=>{ if(!byDate[e.date]) byDate[e.date]={}; byDate[e.date][e.type]=e; });
+  const dates = Object.keys(byDate).sort((a,b)=>new Date(b)-new Date(a));
+
+  el.innerHTML = dates.map(date=>{
+    const {open:o, close:c} = byDate[date];
+    const ref = c || o;
+    const dayPnl = o&&c ? +(c.value-o.value).toFixed(2) : null;
+    const dayPct = o&&c ? +((dayPnl/o.value)*100).toFixed(2) : null;
+    const pnlCls = dayPnl!=null ? (dayPnl>=0?'pos':'neg') : 'neu';
+    const pnlStr = dayPnl!=null ? `${dayPnl>=0?'+':''}$${Math.abs(dayPnl).toFixed(2)} (${dayPct>=0?'+':''}${dayPct}%)` : (c?'Market closed':'Market open');
+
+    const bestStr = ref.best ? `${ref.best.ticker} ${ref.best.pnl>=0?'+':''}$${ref.best.pnl.toFixed(2)} (${ref.best.pct>=0?'+':''}${ref.best.pct.toFixed(1)}%)` : '—';
+    const worstStr = ref.worst ? `${ref.worst.ticker} ${ref.worst.pnl>=0?'+':''}$${ref.worst.pnl.toFixed(2)} (${ref.worst.pct>=0?'+':''}${ref.worst.pct.toFixed(1)}%)` : '—';
+
+    const posRows = ref.positions.map(p=>`
+      <div style="display:flex;justify-content:space-between;padding:.2rem 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:.7rem;color:var(--text)">${p.ticker} <span style="color:var(--muted)">${p.shares}sh</span></span>
+        <span style="font-size:.7rem;font-weight:700" class="${p.pnl>=0?'pos':'neg'}">${p.pnl>=0?'+':''}$${p.pnl.toFixed(2)} (${p.pct>=0?'+':''}${p.pct.toFixed(1)}%)</span>
+      </div>`).join('');
+
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.75rem;margin-bottom:.6rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <span style="font-weight:700;font-size:.85rem">${date}</span>
+        <span style="font-weight:700;font-size:.85rem" class="${pnlCls}">${pnlStr}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem;margin-bottom:.5rem">
+        <div style="font-size:.65rem;color:var(--muted)">Close value <span style="color:var(--text);font-weight:600">$${ref.value.toFixed(2)}</span></div>
+        <div style="font-size:.65rem;color:var(--muted)">Cash <span style="color:var(--text);font-weight:600">$${ref.cash.toFixed(2)}</span></div>
+        <div style="font-size:.65rem;color:var(--muted)">☮️ Peace <span class="${ref.peacePnl>=0?'pos':'neg'};font-weight:600">${ref.peacePnl>=0?'+':''}$${ref.peacePnl.toFixed(2)}</span></div>
+        <div style="font-size:.65rem;color:var(--muted)">⚔️ Conflict <span class="${ref.confPnl>=0?'pos':'neg'};font-weight:600">${ref.confPnl>=0?'+':''}$${ref.confPnl.toFixed(2)}</span></div>
+        <div style="font-size:.65rem;color:var(--muted)">🏆 Best <span style="color:var(--green);font-size:.62rem">${bestStr}</span></div>
+        <div style="font-size:.65rem;color:var(--muted)">📉 Worst <span style="color:var(--red);font-size:.62rem">${worstStr}</span></div>
+        ${ref.trades>0?`<div style="font-size:.65rem;color:var(--muted);grid-column:1/-1">Trades: <span style="color:var(--amber)">${ref.tradeDetails.map(t=>`${t.ticker} ${t.pnl>=0?'+':''}$${t.pnl.toFixed(2)}`).join(', ')}</span></div>`:''}
+      </div>
+      ${posRows?`<details style="margin-top:.25rem"><summary style="font-size:.65rem;color:var(--muted);cursor:pointer">Positions snapshot</summary>${posRows}</details>`:''}
     </div>`;
   }).join('');
 }
@@ -826,6 +940,7 @@ function scheduleMarketNotifications(){
     const now = new Date();
     if(now.getDay()>0 && now.getDay()<6){ // Mon–Fri
       saveOpenSnapshot();
+      saveJournalEntry('open');
       updateDayChangeBadge();
       const val = currentPortfolioValue();
       sendNotif('🔔 Market Open — TradeTracker', `Portfolio: $${val.toFixed(2)} · Bell just rang`);
@@ -839,9 +954,10 @@ function scheduleMarketNotifications(){
     const now = new Date();
     if(now.getDay()>0 && now.getDay()<6){
       saveCloseSnapshot();
+      const entry = saveJournalEntry('close');
       updateDayChangeBadge();
-      const val = currentPortfolioValue();
-      sendNotif('🔔 Market Close — TradeTracker', `Portfolio: $${val.toFixed(2)} · Market closed`);
+      const dayPnlStr = entry ? `Day: ${entry.totalPnl>=0?'+':''}$${entry.totalPnl.toFixed(2)}` : '';
+      sendNotif('🔔 Market Close — TradeTracker', `Portfolio: $${entry.value.toFixed(2)} · ${dayPnlStr}`);
     }
   }, msClose);
 }
