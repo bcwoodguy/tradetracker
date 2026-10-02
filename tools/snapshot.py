@@ -13,6 +13,8 @@ positions.json: [{"ticker":"NVDA","shares":3.662,"basis":193.93,"book":"peace"},
 trades.json:    [{"action":"SELL","ticker":"NVDA","shares":3.662,"price":233.95,"reason":"..."}, ...]
 scores.json:    {"NVDA":2,"AMD":3,...}
 
+Or simply:  snapshot.py --history history.json --state state.json
+
 Backfill mode (positions held constant over a date range):
   snapshot.py --history history.json --positions positions.json --cash 0 \
       --backfill-from 2026-07-02 --backfill-to 2026-10-01
@@ -96,8 +98,9 @@ def upsert(hist, entry):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--history", required=True)
-    ap.add_argument("--positions", required=True)
-    ap.add_argument("--cash", type=float, required=True)
+    ap.add_argument("--state", help="state.json with positions/cash/today's trades (replaces --positions/--cash/--trades/--scores)")
+    ap.add_argument("--positions")
+    ap.add_argument("--cash", type=float)
     ap.add_argument("--trades")
     ap.add_argument("--scores")
     ap.add_argument("--notes", default="")
@@ -107,9 +110,19 @@ def main():
     a = ap.parse_args()
 
     hist = load(a.history, {"start_cash": 10000, "start_date": None, "days": []})
-    positions = load(a.positions, [])
-    trades = load(a.trades, [])
-    scores = load(a.scores, {})
+    if a.state:
+        # state.json: {"positions":[...], "cash":n, "day":{"date":..,"trades":[..],"scores":{..},"notes":".."}}
+        st = load(a.state, {})
+        positions, a.cash = st["positions"], st["cash"]
+        day = st.get("day", {})
+        same = day.get("date") == (a.date or dt.date.today().isoformat())
+        trades = day.get("trades", []) if same else []
+        scores = day.get("scores", {}) if same else {}
+        a.notes = a.notes or (day.get("notes", "") if same else "")
+    else:
+        positions = load(a.positions, [])
+        trades = load(a.trades, [])
+        scores = load(a.scores, {})
     tickers = sorted({p["ticker"] for p in positions} | {t["ticker"] for t in trades})
 
     today = a.date or dt.date.today().isoformat()
