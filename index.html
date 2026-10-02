@@ -107,6 +107,21 @@
     .setup-card a{color:var(--accent)}
     .api-input{width:100%;padding:.6rem .875rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.875rem;outline:none;margin-bottom:.65rem;transition:border-color .15s}
     .api-input:focus{border-color:var(--accent)}
+    .hist-chart{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.6rem .6rem .3rem;margin-bottom:.5rem}
+    .hist-legend{display:flex;gap:.9rem;font-size:.62rem;color:var(--muted);padding:0 .2rem .3rem}
+    .hist-legend i{display:inline-block;width:10px;height:2px;vertical-align:middle;margin-right:.3rem}
+    .hist-dl{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin:.25rem 0 .5rem}
+    .hist-dl button{padding:.5rem;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:.7rem;font-weight:600;cursor:pointer}
+    .hist-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:.35rem}
+    .hist-row summary{list-style:none;display:grid;grid-template-columns:5.2rem 1fr auto auto;gap:.5rem;align-items:center;padding:.5rem .75rem;cursor:pointer;font-size:.74rem;font-variant-numeric:tabular-nums}
+    .hist-row summary::-webkit-details-marker{display:none}
+    .hist-row .hd{color:var(--muted);font-size:.68rem}
+    .hist-row .tag{font-size:.55rem;font-weight:700;padding:.1rem .35rem;border-radius:4px;background:#3b82f622;color:var(--accent)}
+    .hist-body{padding:0 .75rem .6rem;font-size:.66rem;color:var(--muted)}
+    .hist-body table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+    .hist-body th,.hist-body td{text-align:right;padding:.18rem .2rem;border-bottom:1px solid var(--border)}
+    .hist-body th:first-child,.hist-body td:first-child{text-align:left}
+    .hist-body td{color:var(--text)}
     .btn-full{width:100%;padding:.65rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:.875rem;font-weight:700;cursor:pointer}
 
     /* TOAST */
@@ -139,6 +154,7 @@
     <button class="tab active" onclick="showTab('holdings')">Holdings</button>
     <button class="tab" onclick="showTab('closed')">Closed</button>
     <button class="tab" onclick="showTab('summary')">Summary</button>
+    <button class="tab" onclick="showTab('history')">History</button>
     <button class="tab" onclick="showTab('setup')">API Key</button>
   </div>
 </header>
@@ -198,6 +214,26 @@
     </div>
 
     <p class="disc">⚠️ MOCK / PAPER TRADE ONLY — not real money, not financial advice.</p>
+  </div>
+
+  <div id="tab-history" style="display:none">
+    <div style="height:.25rem"></div>
+    <div class="sgrid" id="h-stats"></div>
+    <div class="hist-chart">
+      <div class="hist-legend"><span><i style="background:var(--accent)"></i>Portfolio</span><span><i style="background:var(--muted)"></i>S&amp;P 500 (same $ start)</span><span><i style="background:var(--amber);height:1px"></i>$10k start</span></div>
+      <div id="h-chart"></div>
+    </div>
+    <div class="slabel-row"><span>⬇️ Export for analysis</span></div>
+    <div class="hist-dl">
+      <button onclick="downloadHistory('daily')">Daily summary CSV</button>
+      <button onclick="downloadHistory('positions')">Positions by day CSV</button>
+      <button onclick="downloadHistory('trades')">Trades CSV</button>
+      <button onclick="downloadHistory('json')">Raw JSON</button>
+    </div>
+    <div class="slabel-row"><span>📅 Daily Log</span><span id="h-updated"></span></div>
+    <div id="h-days"></div>
+    <div id="h-empty" style="font-size:.72rem;color:var(--muted);text-align:center;padding:.75rem 0">Loading history…</div>
+    <p class="disc">History is recorded by the bot from end-of-day closes and saved in the repo (history.json), so it's the same on every device.</p>
   </div>
 
   <div id="tab-setup" style="display:none">
@@ -537,12 +573,14 @@ function subscribeNew(ticker){
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 function showTab(name){
-  ['holdings','closed','summary','setup'].forEach(t=>{
+  const TABS=['holdings','closed','summary','history','setup'];
+  TABS.forEach(t=>{
     document.getElementById('tab-'+t).style.display=t===name?'':'none';
   });
   document.querySelectorAll('.tab').forEach((el,i)=>{
-    el.classList.toggle('active',['holdings','closed','summary','setup'][i]===name);
+    el.classList.toggle('active',TABS[i]===name);
   });
+  if(name==='history') loadHistory();
   if(name==='summary') renderSummary();
   if(name==='closed') renderClosed();
 }
@@ -1075,6 +1113,105 @@ function renderSnapshots(){
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
 let toastTimer;
+// ─── HISTORY (bot-recorded, shared via history.json in repo) ────────────────────
+let HISTORY=null;
+async function loadHistory(){
+  const empty=document.getElementById('h-empty');
+  try{
+    const r=await fetch('history.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) throw new Error(r.status);
+    HISTORY=await r.json();
+    renderHistory();
+  }catch(e){
+    empty.textContent=HISTORY?'':'No history file yet — the bot creates it on its next run.';
+    if(HISTORY) renderHistory();
+  }
+}
+
+function renderHistory(){
+  const days=HISTORY.days||[];
+  const empty=document.getElementById('h-empty');
+  if(!days.length){ empty.textContent='No days recorded yet.'; return; }
+  empty.textContent='';
+  const start=HISTORY.start_cash||10000, last=days[days.length-1], first=days[0];
+  const withDay=days.filter(d=>d.day_change!=null);
+  const best=withDay.reduce((a,b)=>b.day_pct>a.day_pct?b:a,withDay[0]||last);
+  const worst=withDay.reduce((a,b)=>b.day_pct<a.day_pct?b:a,withDay[0]||last);
+  const up=withDay.filter(d=>d.day_change>0).length;
+  const maxDD=Math.min(...days.map(d=>d.drawdown_pct||0));
+  const spxRet=(first.spx&&last.spx)?(last.spx/first.spx-1)*100:null;
+  const portRet=(last.total/first.total-1)*100;
+  const stat=(l,v,s,c='')=>`<div class="sc"><div class="sl">${l}</div><div class="sv ${c}">${v}</div><div class="ss">${s}</div></div>`;
+  document.getElementById('h-stats').innerHTML=
+    stat('Total value',USD(last.total),`${USD(last.total-start,true)} since $${start.toLocaleString()} start`,cls(last.total-start))+
+    stat('Total return',PCT(last.cum_return_pct),`as of ${last.date}`,cls(last.cum_return_pct))+
+    stat('vs S&P 500',spxRet!=null?PCT(portRet-spxRet):'—',spxRet!=null?`you ${PCT(portRet)} · S&P ${PCT(spxRet)} since ${first.date}`:'',spxRet!=null?cls(portRet-spxRet):'')+
+    stat('Max drawdown',PCT(maxDD),`peak ${USD(last.peak)}`,maxDD<0?'neg':'')+
+    stat('Best day',best?PCT(best.day_pct):'—',best?`${best.date} · ${USD(best.day_change,true)}`:'','pos')+
+    stat('Worst day',worst?PCT(worst.day_pct):'—',worst?`${worst.date} · ${USD(worst.day_change,true)}`:'','neg')+
+    stat('Up days',`${up}/${withDay.length}`,withDay.length?`${Math.round(up/withDay.length*100)}% win rate`:'')+
+    stat('Realized (tracked)',USD(last.realized_cum||0,true),`cash ${USD(last.cash)}`,cls(last.realized_cum||0));
+  document.getElementById('h-updated').textContent=HISTORY.updated?('updated '+new Date(HISTORY.updated).toLocaleString()):'';
+  drawHistoryChart(days,start);
+  document.getElementById('h-days').innerHTML=[...days].reverse().map(d=>{
+    const rows=(d.positions||[]).map(p=>`<tr><td>${p.ticker}</td><td>${p.shares}</td><td>${USD(p.close)}</td><td>${USD(p.value)}</td><td class="${cls(p.pnl)}">${PCT(p.pnl_pct)}</td><td class="${p.day_pct==null?'':cls(p.day_pct)}">${p.day_pct==null?'—':PCT(p.day_pct)}</td><td>${p.score??''}</td></tr>`).join('');
+    const tr=(d.trades||[]).map(t=>`<div>• <b style="color:${t.action.startsWith('S')?'var(--red)':'var(--green)'}">${t.action}</b> ${t.ticker} ${t.shares} @ ${USD(t.price)}${t.realized!=null?` (${USD(t.realized,true)})`:''} — ${t.reason||''}</div>`).join('');
+    return `<details class="hist-row"><summary>
+      <span class="hd">${d.date}</span><span>${USD(d.total)} ${(d.trades||[]).length?`<span class="tag">${d.trades.length} trades</span>`:''}</span>
+      <span class="${d.day_change==null?'':cls(d.day_change)}">${d.day_change==null?'—':USD(d.day_change,true)}</span>
+      <span class="${cls(d.cum_return_pct)}">${PCT(d.cum_return_pct)}</span></summary>
+      <div class="hist-body">
+        ${d.notes?`<div style="margin-bottom:.35rem">${d.notes}</div>`:''}
+        ${tr?`<div style="margin-bottom:.4rem">${tr}</div>`:''}
+        <div style="margin-bottom:.3rem">Cash ${USD(d.cash)} · Invested ${USD(d.invested)} · Unrealized ${USD(d.unrealized,true)} · Tech ${d.peace_pct}% · Drawdown ${PCT(d.drawdown_pct)}${d.spx?` · S&P ${d.spx.toLocaleString()}`:''}</div>
+        <table><tr><th>Ticker</th><th>Sh</th><th>Close</th><th>Value</th><th>P&L</th><th>Day</th><th>Score</th></tr>${rows}</table>
+      </div></details>`;
+  }).join('');
+}
+
+function drawHistoryChart(days,start){
+  const W=340,H=150,P={l:40,r:6,t:6,b:16};
+  const spx0=days.find(d=>d.spx)?.spx, base=days[0].total;
+  const port=days.map(d=>d.total);
+  const bench=days.map(d=>d.spx&&spx0?base*d.spx/spx0:null);
+  const all=[...port,...bench.filter(v=>v!=null),start];
+  const lo=Math.min(...all)*0.99, hi=Math.max(...all)*1.01;
+  const x=i=>P.l+(days.length<2?0:i*(W-P.l-P.r)/(days.length-1));
+  const y=v=>P.t+(hi-v)*(H-P.t-P.b)/(hi-lo);
+  const path=arr=>arr.map((v,i)=>v==null?'':`${i&&arr[i-1]!=null?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const ticks=[lo,(lo+hi)/2,hi].map(v=>`<text x="${P.l-4}" y="${y(v)+3}" text-anchor="end" font-size="8" fill="var(--muted)">$${(v/1000).toFixed(1)}k</text>`).join('');
+  const lbl=i=>`<text x="${x(i)}" y="${H-3}" text-anchor="${i?'end':'start'}" font-size="8" fill="var(--muted)">${days[i].date.slice(5)}</text>`;
+  document.getElementById('h-chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Portfolio value over time">
+    ${ticks}<line x1="${P.l}" x2="${W-P.r}" y1="${y(start)}" y2="${y(start)}" stroke="var(--amber)" stroke-width=".6" stroke-dasharray="3 3"/>
+    <path d="${path(bench)}" fill="none" stroke="var(--muted)" stroke-width="1.2"/>
+    <path d="${path(port)}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+    ${lbl(0)}${days.length>1?lbl(days.length-1):''}</svg>`;
+}
+
+function downloadHistory(kind){
+  if(!HISTORY){ showToast('History not loaded yet'); return; }
+  const esc=v=>v==null?'':(/[",\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v);
+  const csv=rows=>rows.map(r=>r.map(esc).join(',')).join('\n');
+  const days=HISTORY.days||[]; let out, name, type='text/csv';
+  if(kind==='daily'){
+    out=csv([['date','total','cash','invested','cost_basis','unrealized','realized_today','realized_cum','day_change','day_pct','cum_return_pct','peak','drawdown_pct','tech_pct','spx','nasdaq','num_trades','notes'],
+      ...days.map(d=>[d.date,d.total,d.cash,d.invested,d.cost_basis,d.unrealized,d.realized_today,d.realized_cum,d.day_change,d.day_pct,d.cum_return_pct,d.peak,d.drawdown_pct,d.peace_pct,d.spx,d.ndx,(d.trades||[]).length,d.notes])]);
+    name='tradetracker_daily.csv';
+  }else if(kind==='positions'){
+    out=csv([['date','ticker','book','shares','basis','close','value','pnl','pnl_pct','day_pct','score'],
+      ...days.flatMap(d=>(d.positions||[]).map(p=>[d.date,p.ticker,p.book,p.shares,p.basis,p.close,p.value,p.pnl,p.pnl_pct,p.day_pct,p.score]))]);
+    name='tradetracker_positions.csv';
+  }else if(kind==='trades'){
+    out=csv([['date','action','ticker','shares','price','amount','basis','realized','reason'],
+      ...days.flatMap(d=>(d.trades||[]).map(t=>[d.date,t.action,t.ticker,t.shares,t.price,t.amount,t.basis,t.realized,t.reason]))]);
+    name='tradetracker_trades.csv';
+  }else{ out=JSON.stringify(HISTORY,null,1); name='tradetracker_history.json'; type='application/json'; }
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([out],{type}));
+  a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
