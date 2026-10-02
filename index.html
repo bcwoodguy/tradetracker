@@ -279,20 +279,21 @@
 // ─── STATE ────────────────────────────────────────────────────────────────────
 // BOT_VERSION: bot increments this timestamp on every trade push.
 // If BOT_VERSION > state.botVersion, positions are merged from DEFAULT_POSITIONS.
-const BOT_VERSION = 1753142400; // 2026-07-22 — initial baseline
+const BOT_VERSION = 1790983966; // 2026-10-02 — trim NVDA/MSFT/PLTR, add AMD/AMZN/GOOGL/AAPL/SPCX
 
 const DEFAULT_POSITIONS = [
-  {id:'p1',ticker:'NVDA', shares:7.324,basis:193.93,book:'peace'},
-  {id:'p2',ticker:'AMZN', shares:4.980,basis:234.27,book:'peace'},
-  {id:'p3',ticker:'GOOGL',shares:3.436,basis:339.50,book:'peace'},
-  {id:'p5',ticker:'MSFT', shares:3.091,basis:377.50,book:'peace'},
-  {id:'p6',ticker:'AAPL', shares:4.069,basis:286.73,book:'peace'},
+  {id:'p1',ticker:'NVDA', shares:3.662,basis:193.93,book:'peace'},
+  {id:'p2',ticker:'AMZN', shares:5.934,basis:237.04,book:'peace'},
+  {id:'p3',ticker:'GOOGL',shares:4.309,basis:340.31,book:'peace'},
+  {id:'p5',ticker:'MSFT', shares:1.545,basis:377.50,book:'peace'},
+  {id:'p6',ticker:'AAPL', shares:4.489,basis:291.12,book:'peace'},
   {id:'p12',ticker:'INTC', shares:3.769,basis:129.38,book:'peace'},
   {id:'p13',ticker:'UBER', shares:13.422,basis:72.66,book:'peace'},
+  {id:'p14',ticker:'AMD',  shares:2.209,basis:633.91,book:'peace'},
   {id:'p7',ticker:'LMT',  shares:1.464,basis:512.41,book:'conflict'},
   {id:'p8',ticker:'RTX',  shares:3.952,basis:189.73,book:'conflict'},
-  {id:'p10',ticker:'PLTR',shares:11.158,basis:121.00,book:'conflict'},
-  {id:'p11',ticker:'SPCX',shares:2.378,basis:157.69,book:'conflict'},
+  {id:'p10',ticker:'PLTR', shares:5.579,basis:121.00,book:'conflict'},
+  {id:'p11',ticker:'SPCX', shares:5.523,basis:158.41,book:'conflict'},
 ];
 
 let READ_ONLY = false;
