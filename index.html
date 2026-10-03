@@ -142,6 +142,7 @@
         <span class="badge neu" id="total-pnl-badge">— awaiting prices</span>
         <span class="badge realized" id="realized-badge" style="display:none"></span>
         <span class="badge neu" id="day-change-badge" style="display:none"></span>
+        <span class="badge realized" id="vault-badge" style="display:none"></span>
       </div>
     </div>
     <div class="status-wrap">
@@ -318,6 +319,8 @@
 const BOT_VERSION = 1790983966; // 2026-10-02 — trim NVDA/MSFT/PLTR, add AMD/AMZN/GOOGL/AAPL/SPCX
 // BOT_CASH: bot's cash balance after its last run; applied to every device on sync.
 const BOT_CASH = 129.86;
+// BOT_VAULT: money withdrawn to the vault (house-money plan). Counted in account value, never reinvested.
+const BOT_VAULT = 0;
 
 const DEFAULT_POSITIONS = [
   {id:'p1',ticker:'NVDA', shares:3.662,basis:193.93,book:'peace'},
@@ -389,6 +392,7 @@ function loadState() {
         // Merge: bot positions from DEFAULT_POSITIONS + keep user's custom positions
         state.positions = [...DEFAULT_POSITIONS.map(p=>({...p})), ...userPositions];
         state.cash = BOT_CASH;
+        state.vault = BOT_VAULT;
         state.botVersion = BOT_VERSION;
         saveState();
         console.log('Bot update applied:', BOT_VERSION, '— user positions preserved:', userPositions.length);
@@ -397,7 +401,7 @@ function loadState() {
     } catch(e) {}
   }
   // First time — load defaults
-  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,cash:BOT_CASH,cashLedger:[],snapshots:[],botVersion:BOT_VERSION,name:'TradeTracker'};
+  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,cash:BOT_CASH,vault:BOT_VAULT,cashLedger:[],snapshots:[],botVersion:BOT_VERSION,name:'TradeTracker'};
   saveState();
 }
 
@@ -760,6 +764,13 @@ function renderAll(){
     badge.className='badge '+(gain>=0?'pos':'neg');
   }
 
+  const vb=document.getElementById('vault-badge');
+  if(vb){
+    const v=state.vault||0;
+    vb.style.display=v>0?'':'none';
+    vb.textContent=`🏦 Vault ${USD(v)} · at risk ${USD(val-v)}`+(v>=state.startCash?' · house money':'');
+  }
+
   const realizedTotal=state.closed.reduce((s,c)=>s+c.pnl,0);
   const rb=document.getElementById('realized-badge');
   if(state.closed.length>0){
@@ -1007,10 +1018,10 @@ function scheduleMarketNotifications(){
 }
 
 // ─── DAILY SNAPSHOT ───────────────────────────────────────────────────────────
-// Market value of holdings (cost basis until a live price arrives) + cash.
+// Account value = holdings at market (cost basis until a live price arrives) + cash + vault.
 function currentPortfolioValue(){
   const held=state.positions.reduce((s,p)=>s+p.shares*(prices[p.ticker]??p.basis),0);
-  return +(held+(state.cash||0)).toFixed(2);
+  return +(held+(state.cash||0)+(state.vault||0)).toFixed(2);
 }
 
 function saveCloseSnapshot(){
@@ -1156,12 +1167,15 @@ function renderHistory(){
     stat('Best day',best?PCT(best.day_pct):'—',best?`${best.date} · ${USD(best.day_change,true)}`:'','pos')+
     stat('Worst day',worst?PCT(worst.day_pct):'—',worst?`${worst.date} · ${USD(worst.day_change,true)}`:'','neg')+
     stat('Up days',`${up}/${withDay.length}`,withDay.length?`${Math.round(up/withDay.length*100)}% win rate`:'')+
-    stat('Realized (tracked)',USD(last.realized_cum||0,true),`cash ${USD(last.cash)}`,cls(last.realized_cum||0));
+    stat('Realized (tracked)',USD(last.realized_cum||0,true),`cash ${USD(last.cash)}`,cls(last.realized_cum||0))+
+    `<div class="sc full"><div class="sl">🏦 Vault (house-money plan)</div><div class="sv">${USD(last.vault||0)} <span style="font-size:.7rem;color:var(--muted)">of ${USD(start)} stake withdrawn</span></div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;margin:.45rem 0 .3rem;overflow:hidden"><div style="height:100%;width:${Math.min(100,(last.vault||0)/start*100)}%;background:var(--green)"></div></div>
+      <div class="ss">At risk ${USD(last.at_risk??last.total)} · ${(last.vault||0)>=start?'everything left is house money':`next $2,500 withdrawal at ${USD(Math.max(12500,Math.floor((last.total)/2500)*2500+2500))} account value`}</div></div>`;
   document.getElementById('h-updated').textContent=HISTORY.updated?('updated '+new Date(HISTORY.updated).toLocaleString()):'';
   drawHistoryChart(days,start);
   document.getElementById('h-days').innerHTML=[...days].reverse().map(d=>{
     const rows=(d.positions||[]).map(p=>`<tr><td>${p.ticker}</td><td>${p.shares}</td><td>${USD(p.close)}</td><td>${USD(p.value)}</td><td class="${cls(p.pnl)}">${PCT(p.pnl_pct)}</td><td class="${p.day_pct==null?'':cls(p.day_pct)}">${p.day_pct==null?'—':PCT(p.day_pct)}</td><td>${p.score??''}</td></tr>`).join('');
-    const tr=(d.trades||[]).map(t=>`<div>• <b style="color:${t.action.startsWith('S')?'var(--red)':'var(--green)'}">${t.action}</b> ${t.ticker} ${t.shares} @ ${USD(t.price)}${t.realized!=null?` (${USD(t.realized,true)})`:''} — ${t.reason||''}</div>`).join('');
+    const tr=(d.trades||[]).map(t=>t.action==='WITHDRAW'?`<div>• <b style="color:#a78bfa">🏦 VAULT</b> ${USD(t.amount)} — ${t.reason||''}</div>`:`<div>• <b style="color:${t.action.startsWith('S')?'var(--red)':'var(--green)'}">${t.action}</b> ${t.ticker} ${t.shares} @ ${USD(t.price)}${t.realized!=null?` (${USD(t.realized,true)})`:''} — ${t.reason||''}</div>`).join('');
     return `<details class="hist-row"><summary>
       <span class="hd">${d.date}</span><span>${USD(d.total)} ${(d.trades||[]).length?`<span class="tag">${d.trades.length} trades</span>`:''}</span>
       <span class="${d.day_change==null?'':cls(d.day_change)}">${d.day_change==null?'—':USD(d.day_change,true)}</span>
@@ -1169,7 +1183,7 @@ function renderHistory(){
       <div class="hist-body">
         ${d.notes?`<div style="margin-bottom:.35rem">${d.notes}</div>`:''}
         ${tr?`<div style="margin-bottom:.4rem">${tr}</div>`:''}
-        <div style="margin-bottom:.3rem">Cash ${USD(d.cash)} · Invested ${USD(d.invested)} · Unrealized ${USD(d.unrealized,true)} · Tech ${d.peace_pct}% · Drawdown ${PCT(d.drawdown_pct)}${d.spx?` · S&P ${d.spx.toLocaleString()}`:''}</div>
+        <div style="margin-bottom:.3rem">${d.vault?`Vault ${USD(d.vault)} · `:''}Cash ${USD(d.cash)} · Invested ${USD(d.invested)} · Unrealized ${USD(d.unrealized,true)} · Tech ${d.peace_pct}% · Drawdown ${PCT(d.drawdown_pct)}${d.spx?` · S&P ${d.spx.toLocaleString()}`:''}</div>
         <table><tr><th>Ticker</th><th>Sh</th><th>Close</th><th>Value</th><th>P&L</th><th>Day</th><th>Score</th></tr>${rows}</table>
       </div></details>`;
   }).join('');
@@ -1200,8 +1214,8 @@ function downloadHistory(kind){
   const csv=rows=>rows.map(r=>r.map(esc).join(',')).join('\n');
   const days=HISTORY.days||[]; let out, name, type='text/csv';
   if(kind==='daily'){
-    out=csv([['date','total','cash','invested','cost_basis','unrealized','realized_today','realized_cum','day_change','day_pct','cum_return_pct','peak','drawdown_pct','tech_pct','spx','nasdaq','num_trades','notes'],
-      ...days.map(d=>[d.date,d.total,d.cash,d.invested,d.cost_basis,d.unrealized,d.realized_today,d.realized_cum,d.day_change,d.day_pct,d.cum_return_pct,d.peak,d.drawdown_pct,d.peace_pct,d.spx,d.ndx,(d.trades||[]).length,d.notes])]);
+    out=csv([['date','total','at_risk','vault','cash','invested','cost_basis','unrealized','realized_today','realized_cum','day_change','day_pct','cum_return_pct','peak','drawdown_pct','tech_pct','spx','nasdaq','num_trades','notes'],
+      ...days.map(d=>[d.date,d.total,d.at_risk??d.total,d.vault||0,d.cash,d.invested,d.cost_basis,d.unrealized,d.realized_today,d.realized_cum,d.day_change,d.day_pct,d.cum_return_pct,d.peak,d.drawdown_pct,d.peace_pct,d.spx,d.ndx,(d.trades||[]).length,d.notes])]);
     name='tradetracker_daily.csv';
   }else if(kind==='positions'){
     out=csv([['date','ticker','book','shares','basis','close','value','pnl','pnl_pct','day_pct','score'],
