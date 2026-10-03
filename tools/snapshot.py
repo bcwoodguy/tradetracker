@@ -46,7 +46,7 @@ def load(path, default):
     return default
 
 
-def build_entry(date, positions, cash, px, prev_px, prev_entry, start_cash, trades, scores, notes, bench):
+def build_entry(date, positions, cash, vault, px, prev_px, prev_entry, start_cash, trades, scores, notes, bench):
     rows, invested, cost = [], 0.0, 0.0
     for p in positions:
         c = px[p["ticker"]]
@@ -61,9 +61,12 @@ def build_entry(date, positions, cash, px, prev_px, prev_entry, start_cash, trad
             "day_pct": round((c / pc - 1) * 100, 2) if pc else None,
             "score": scores.get(p["ticker"]),
         })
-    total = invested + cash
+    at_risk = invested + cash
+    total = at_risk + vault  # account value incl. money withdrawn to the vault
     realized_today = 0.0
     for t in trades:
+        if t["action"].upper() == "WITHDRAW":
+            continue
         t["amount"] = round(t["shares"] * t["price"], 2)
         if t["action"].upper().startswith("SELL") and "basis" in t:
             t["realized"] = round((t["price"] - t["basis"]) * t["shares"], 2)
@@ -73,7 +76,7 @@ def build_entry(date, positions, cash, px, prev_px, prev_entry, start_cash, trad
     peace = sum(r["value"] for r in rows if r["book"] == "peace")
     e = {
         "date": date,
-        "total": round(total, 2), "cash": round(cash, 2), "invested": round(invested, 2),
+        "total": round(total, 2), "at_risk": round(at_risk, 2), "vault": round(vault, 2), "cash": round(cash, 2), "invested": round(invested, 2),
         "cost_basis": round(cost, 2), "unrealized": round(invested - cost, 2),
         "realized_today": round(realized_today, 2),
         "realized_cum": round((prev_entry.get("realized_cum", 0) if prev_entry else 0) + realized_today, 2),
@@ -111,9 +114,10 @@ def main():
 
     hist = load(a.history, {"start_cash": 10000, "start_date": None, "days": []})
     if a.state:
-        # state.json: {"positions":[...], "cash":n, "day":{"date":..,"trades":[..],"scores":{..},"notes":".."}}
+        # state.json: {"positions":[...], "cash":n, "vault":n, "day":{"date":..,"trades":[..],"scores":{..},"notes":".."}}
         st = load(a.state, {})
         positions, a.cash = st["positions"], st["cash"]
+        vault = st.get("vault", 0.0)
         day = st.get("day", {})
         same = day.get("date") == (a.date or dt.date.today().isoformat())
         trades = day.get("trades", []) if same else []
@@ -121,9 +125,10 @@ def main():
         a.notes = a.notes or (day.get("notes", "") if same else "")
     else:
         positions = load(a.positions, [])
+        vault = 0.0
         trades = load(a.trades, [])
         scores = load(a.scores, {})
-    tickers = sorted({p["ticker"] for p in positions} | {t["ticker"] for t in trades})
+    tickers = sorted({p["ticker"] for p in positions} | {t["ticker"] for t in trades if t.get("ticker")})
 
     today = a.date or dt.date.today().isoformat()
     start = a.backfill_from or today
@@ -147,7 +152,7 @@ def main():
             earlier = [k for k in s if k < d]
             if earlier:
                 prev_px[t] = s[max(earlier)]
-        e = build_entry(d, positions, a.cash, px, prev_px, prev_entry, hist["start_cash"],
+        e = build_entry(d, positions, a.cash, vault, px, prev_px, prev_entry, hist["start_cash"],
                         [] if a.backfill_from else trades, {} if a.backfill_from else scores,
                         "backfilled from historical closes" if a.backfill_from else a.notes,
                         {k: (round(v[d], 2) if d in v else None) for k, v in bench.items()})
