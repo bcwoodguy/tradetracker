@@ -154,7 +154,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11202.11,
+   "vault": 0.0
   },
   {
    "date": "2026-07-06",
@@ -308,7 +310,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11251.31,
+   "vault": 0.0
   },
   {
    "date": "2026-07-07",
@@ -462,7 +466,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11240.4,
+   "vault": 0.0
   },
   {
    "date": "2026-07-08",
@@ -616,7 +622,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11186.39,
+   "vault": 0.0
   },
   {
    "date": "2026-07-09",
@@ -770,7 +778,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11177.24,
+   "vault": 0.0
   },
   {
    "date": "2026-07-10",
@@ -924,7 +934,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11182.53,
+   "vault": 0.0
   },
   {
    "date": "2026-07-13",
@@ -1078,7 +1090,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11138.81,
+   "vault": 0.0
   },
   {
    "date": "2026-07-14",
@@ -1232,7 +1246,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11197.46,
+   "vault": 0.0
   },
   {
    "date": "2026-07-15",
@@ -1386,7 +1402,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11361.06,
+   "vault": 0.0
   },
   {
    "date": "2026-07-16",
@@ -1540,7 +1558,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11268.26,
+   "vault": 0.0
   },
   {
    "date": "2026-07-17",
@@ -1694,7 +1714,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11095.67,
+   "vault": 0.0
   },
   {
    "date": "2026-07-20",
@@ -1848,7 +1870,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11154.12,
+   "vault": 0.0
   },
   {
    "date": "2026-07-21",
@@ -2002,7 +2026,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11146.36,
+   "vault": 0.0
   },
   {
    "date": "2026-07-22",
@@ -2156,7 +2182,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 10998.46,
+   "vault": 0.0
   },
   {
    "date": "2026-07-23",
@@ -2310,7 +2338,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 10891.9,
+   "vault": 0.0
   },
   {
    "date": "2026-07-24",
@@ -2464,7 +2494,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 10876.37,
+   "vault": 0.0
   },
   {
    "date": "2026-07-27",
@@ -2618,7 +2650,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 10997.66,
+   "vault": 0.0
   },
   {
    "date": "2026-07-28",
@@ -2772,7 +2806,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 10983.62,
+   "vault": 0.0
   },
   {
    "date": "2026-07-29",
@@ -2926,7 +2962,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 10848.85,
+   "vault": 0.0
   },
   {
    "date": "2026-07-30",
@@ -3080,7 +3118,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11105.49,
+   "vault": 0.0
   },
   {
    "date": "2026-07-31",
@@ -3234,7 +3274,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11358.65,
+   "vault": 0.0
   },
   {
    "date": "2026-08-03",
@@ -3388,7 +3430,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11646.19,
+   "vault": 0.0
   },
   {
    "date": "2026-08-04",
@@ -3542,7 +3586,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12196.97,
+   "vault": 0.0
   },
   {
    "date": "2026-08-05",
@@ -3696,7 +3742,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12026.28,
+   "vault": 0.0
   },
   {
    "date": "2026-08-06",
@@ -3850,7 +3898,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12075.87,
+   "vault": 0.0
   },
   {
    "date": "2026-08-07",
@@ -4004,7 +4054,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12413.01,
+   "vault": 0.0
   },
   {
    "date": "2026-08-10",
@@ -4158,7 +4210,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12493.96,
+   "vault": 0.0
   },
   {
    "date": "2026-08-11",
@@ -4312,7 +4366,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12379.33,
+   "vault": 0.0
   },
   {
    "date": "2026-08-12",
@@ -4466,7 +4522,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12321.21,
+   "vault": 0.0
   },
   {
    "date": "2026-08-13",
@@ -4620,7 +4678,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12431.25,
+   "vault": 0.0
   },
   {
    "date": "2026-08-14",
@@ -4774,7 +4834,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12374.56,
+   "vault": 0.0
   },
   {
    "date": "2026-08-17",
@@ -4928,7 +4990,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12274.26,
+   "vault": 0.0
   },
   {
    "date": "2026-08-18",
@@ -5082,7 +5146,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12235.79,
+   "vault": 0.0
   },
   {
    "date": "2026-08-19",
@@ -5236,7 +5302,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12305.35,
+   "vault": 0.0
   },
   {
    "date": "2026-08-20",
@@ -5390,7 +5458,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12144.86,
+   "vault": 0.0
   },
   {
    "date": "2026-08-21",
@@ -5544,7 +5614,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12183.07,
+   "vault": 0.0
   },
   {
    "date": "2026-08-24",
@@ -5698,7 +5770,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12126.46,
+   "vault": 0.0
   },
   {
    "date": "2026-08-25",
@@ -5852,7 +5926,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12142.78,
+   "vault": 0.0
   },
   {
    "date": "2026-08-26",
@@ -6006,7 +6082,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12181.07,
+   "vault": 0.0
   },
   {
    "date": "2026-08-27",
@@ -6160,7 +6238,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12413.65,
+   "vault": 0.0
   },
   {
    "date": "2026-08-28",
@@ -6314,7 +6394,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12471.62,
+   "vault": 0.0
   },
   {
    "date": "2026-08-31",
@@ -6468,7 +6550,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12350.6,
+   "vault": 0.0
   },
   {
    "date": "2026-09-01",
@@ -6622,7 +6706,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12183.68,
+   "vault": 0.0
   },
   {
    "date": "2026-09-02",
@@ -6776,7 +6862,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12092.28,
+   "vault": 0.0
   },
   {
    "date": "2026-09-03",
@@ -6930,7 +7018,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12388.37,
+   "vault": 0.0
   },
   {
    "date": "2026-09-04",
@@ -7084,7 +7174,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12221.47,
+   "vault": 0.0
   },
   {
    "date": "2026-09-08",
@@ -7238,7 +7330,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12120.14,
+   "vault": 0.0
   },
   {
    "date": "2026-09-09",
@@ -7392,7 +7486,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11979.5,
+   "vault": 0.0
   },
   {
    "date": "2026-09-10",
@@ -7546,7 +7642,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 11961.55,
+   "vault": 0.0
   },
   {
    "date": "2026-09-11",
@@ -7700,7 +7798,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12048.72,
+   "vault": 0.0
   },
   {
    "date": "2026-09-14",
@@ -7854,7 +7954,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12099.97,
+   "vault": 0.0
   },
   {
    "date": "2026-09-15",
@@ -8008,7 +8110,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12006.34,
+   "vault": 0.0
   },
   {
    "date": "2026-09-16",
@@ -8162,7 +8266,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12039.58,
+   "vault": 0.0
   },
   {
    "date": "2026-09-17",
@@ -8316,7 +8422,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12209.14,
+   "vault": 0.0
   },
   {
    "date": "2026-09-18",
@@ -8470,7 +8578,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12234.76,
+   "vault": 0.0
   },
   {
    "date": "2026-09-21",
@@ -8624,7 +8734,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12467.55,
+   "vault": 0.0
   },
   {
    "date": "2026-09-22",
@@ -8778,7 +8890,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12430.82,
+   "vault": 0.0
   },
   {
    "date": "2026-09-23",
@@ -8932,7 +9046,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12386.74,
+   "vault": 0.0
   },
   {
    "date": "2026-09-24",
@@ -9086,7 +9202,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12391.27,
+   "vault": 0.0
   },
   {
    "date": "2026-09-25",
@@ -9240,7 +9358,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12433.84,
+   "vault": 0.0
   },
   {
    "date": "2026-09-28",
@@ -9394,7 +9514,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12320.76,
+   "vault": 0.0
   },
   {
    "date": "2026-09-29",
@@ -9548,7 +9670,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12275.08,
+   "vault": 0.0
   },
   {
    "date": "2026-09-30",
@@ -9702,7 +9826,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12333.88,
+   "vault": 0.0
   },
   {
    "date": "2026-10-01",
@@ -9856,7 +9982,9 @@
     }
    ],
    "trades": [],
-   "notes": "backfilled from historical closes"
+   "notes": "backfilled from historical closes",
+   "at_risk": 12325.49,
+   "vault": 0.0
   },
   {
    "date": "2026-10-02",
@@ -10093,7 +10221,9 @@
      "amount": 499.93
     }
    ],
-   "notes": "Risk-on: weak Sept jobs (+29k) cemented Fed hold; Nasdaq +1.2%. Run executed after close at closing prices."
+   "notes": "Risk-on: weak Sept jobs (+29k) cemented Fed hold; Nasdaq +1.2%. Run executed after close at closing prices.",
+   "at_risk": 12421.75,
+   "vault": 0.0
   }
  ],
  "updated": "2026-10-02T23:43:45+00:00"
