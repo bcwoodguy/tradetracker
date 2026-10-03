@@ -316,6 +316,8 @@
 // BOT_VERSION: bot increments this timestamp on every trade push.
 // If BOT_VERSION > state.botVersion, positions are merged from DEFAULT_POSITIONS.
 const BOT_VERSION = 1790983966; // 2026-10-02 — trim NVDA/MSFT/PLTR, add AMD/AMZN/GOOGL/AAPL/SPCX
+// BOT_CASH: bot's cash balance after its last run; applied to every device on sync.
+const BOT_CASH = 129.86;
 
 const DEFAULT_POSITIONS = [
   {id:'p1',ticker:'NVDA', shares:3.662,basis:193.93,book:'peace'},
@@ -386,6 +388,7 @@ function loadState() {
         });
         // Merge: bot positions from DEFAULT_POSITIONS + keep user's custom positions
         state.positions = [...DEFAULT_POSITIONS.map(p=>({...p})), ...userPositions];
+        state.cash = BOT_CASH;
         state.botVersion = BOT_VERSION;
         saveState();
         console.log('Bot update applied:', BOT_VERSION, '— user positions preserved:', userPositions.length);
@@ -394,7 +397,7 @@ function loadState() {
     } catch(e) {}
   }
   // First time — load defaults
-  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,cash:0,cashLedger:[],snapshots:[],botVersion:BOT_VERSION,name:'TradeTracker'};
+  state = {positions:[...DEFAULT_POSITIONS.map(p=>({...p}))],closed:[],startCash:10000,cash:BOT_CASH,cashLedger:[],snapshots:[],botVersion:BOT_VERSION,name:'TradeTracker'};
   saveState();
 }
 
@@ -453,7 +456,7 @@ function buildEmailBody(){
     lines.push(`${p.ticker}: ${pnl>=0?'+':''}$${pnl.toFixed(2)} (${pct}%)`);
   });
   const realized=state.closed.reduce((s,c)=>s+c.pnl,0);
-  const portVal=(state.startCash+totalPnl+(state.cash||0)).toFixed(2);
+  const portVal=currentPortfolioValue().toFixed(2);
   const subject=`TradeTracker EOD — Portfolio $${portVal} | Unrealized ${totalPnl>=0?'+':''}$${totalPnl.toFixed(2)}`;
   const body=[
     `📊 End-of-Day Portfolio Summary`,
@@ -746,13 +749,15 @@ function renderAll(){
   state.positions.forEach(p=>{
     if(prices[p.ticker]!=null){ pricesReady++; totalPnl+=(prices[p.ticker]-p.basis)*p.shares; }
   });
-  const val=state.startCash+totalPnl+(state.cash||0);
+  const val=currentPortfolioValue();
+  const gain=val-state.startCash;
   document.getElementById('total-value').textContent=USD(val);
 
   const badge=document.getElementById('total-pnl-badge');
   if(pricesReady>0){
-    badge.textContent=`${USD(totalPnl,true)} (${PCT(totalPnl/100)})`;
-    badge.className='badge '+(totalPnl>=0?'pos':'neg');
+    badge.textContent=`${USD(gain,true)} (${PCT(gain/state.startCash*100)})`;
+    badge.title=`Unrealized on open positions: ${USD(totalPnl,true)}`;
+    badge.className='badge '+(gain>=0?'pos':'neg');
   }
 
   const realizedTotal=state.closed.reduce((s,c)=>s+c.pnl,0);
@@ -792,11 +797,11 @@ function renderSummary(){
     if(!best||pnl>best.pnl) best={ticker:p.ticker,pnl};
     if(!worst||pnl<worst.pnl) worst={ticker:p.ticker,pnl};
   });
-  const val=state.startCash+totalPnl;
+  const val=currentPortfolioValue();
   const realized=state.closed.reduce((s,c)=>s+c.pnl,0);
   document.getElementById('s-val').textContent=USD(val);
-  document.getElementById('s-val').className='sv '+cls(totalPnl);
-  document.getElementById('s-pct').textContent=PCT(totalPnl/100);
+  document.getElementById('s-val').className='sv '+cls(val-state.startCash);
+  document.getElementById('s-pct').textContent=PCT((val-state.startCash)/state.startCash*100)+' total';
   document.getElementById('s-peace').textContent=USD(peacePnl,true);
   document.getElementById('s-peace').className='sv '+cls(peacePnl);
   document.getElementById('s-conf').textContent=USD(confPnl,true);
@@ -867,7 +872,7 @@ function buildDayEntry(type){
     if(!worst||pnl<worst.pnl) worst={ticker:p.ticker,pnl,pct};
     posSnap.push({ticker:p.ticker,shares:p.shares,basis:p.basis,price:pr,pnl:+pnl.toFixed(2),pct:+pct.toFixed(2),book:p.book});
   });
-  const portVal = +(state.startCash+totalPnl+(state.cash||0)).toFixed(2);
+  const portVal = currentPortfolioValue();
   // Trades made today
   const todayTrades = state.closed.filter(c=>c.exitAt===today);
   return {
@@ -1002,12 +1007,10 @@ function scheduleMarketNotifications(){
 }
 
 // ─── DAILY SNAPSHOT ───────────────────────────────────────────────────────────
+// Market value of holdings (cost basis until a live price arrives) + cash.
 function currentPortfolioValue(){
-  let totalPnl=0;
-  state.positions.forEach(p=>{
-    if(prices[p.ticker]!=null) totalPnl+=(prices[p.ticker]-p.basis)*p.shares;
-  });
-  return +(state.startCash+totalPnl+(state.cash||0)).toFixed(2);
+  const held=state.positions.reduce((s,p)=>s+p.shares*(prices[p.ticker]??p.basis),0);
+  return +(held+(state.cash||0)).toFixed(2);
 }
 
 function saveCloseSnapshot(){
@@ -1046,7 +1049,10 @@ function updateDayChangeBadge(){
   if(!badge) return;
   // Find most recent close snapshot (yesterday or earlier)
   const today=new Date().toLocaleDateString();
-  const prevClose=state.snapshots.slice().reverse().find(s=>s.type==='close'&&s.date!==today);
+  // Prefer the bot's shared history (same on every device); fall back to local snapshots.
+  const todayISO=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
+  const h=HISTORY&&(HISTORY.days||[]).filter(d=>d.date<todayISO).pop();
+  const prevClose=h?{value:h.total,date:h.date}:state.snapshots.slice().reverse().find(s=>s.type==='close'&&s.date!==today);
   if(!prevClose){ badge.style.display='none'; return; }
   const cur=currentPortfolioValue();
   const diff=+(cur-prevClose.value).toFixed(2);
@@ -1251,6 +1257,7 @@ function boot(){
 
   showTab('holdings');
   connectWS(key);
+  loadHistory().then(updateDayChangeBadge);
 }
 
 boot();
