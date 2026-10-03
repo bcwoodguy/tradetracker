@@ -1,0 +1,161 @@
+{
+ "positions": [
+  {
+   "ticker": "NVDA",
+   "shares": 3.662,
+   "basis": 193.93,
+   "book": "peace",
+   "last_trim_price": 233.95
+  },
+  {
+   "ticker": "AMZN",
+   "shares": 5.934,
+   "basis": 237.04,
+   "book": "peace"
+  },
+  {
+   "ticker": "GOOGL",
+   "shares": 4.309,
+   "basis": 340.31,
+   "book": "peace"
+  },
+  {
+   "ticker": "MSFT",
+   "shares": 1.545,
+   "basis": 377.5,
+   "book": "peace",
+   "last_trim_price": 517.53
+  },
+  {
+   "ticker": "AAPL",
+   "shares": 4.489,
+   "basis": 291.12,
+   "book": "peace"
+  },
+  {
+   "ticker": "INTC",
+   "shares": 3.769,
+   "basis": 129.38,
+   "book": "peace"
+  },
+  {
+   "ticker": "UBER",
+   "shares": 13.422,
+   "basis": 72.66,
+   "book": "peace"
+  },
+  {
+   "ticker": "AMD",
+   "shares": 2.209,
+   "basis": 633.91,
+   "book": "peace"
+  },
+  {
+   "ticker": "LMT",
+   "shares": 1.464,
+   "basis": 512.41,
+   "book": "conflict"
+  },
+  {
+   "ticker": "RTX",
+   "shares": 3.952,
+   "basis": 189.73,
+   "book": "conflict"
+  },
+  {
+   "ticker": "PLTR",
+   "shares": 5.579,
+   "basis": 121.0,
+   "book": "conflict",
+   "last_trim_price": 188.75
+  },
+  {
+   "ticker": "SPCX",
+   "shares": 5.523,
+   "basis": 158.41,
+   "book": "conflict"
+  }
+ ],
+ "cash": 129.86,
+ "day": {
+  "date": "2026-10-02",
+  "trades": [
+   {
+    "action": "SELL",
+    "ticker": "NVDA",
+    "shares": 3.662,
+    "price": 233.95,
+    "basis": 193.93,
+    "reason": "Take-profit: +20.6% and over $1,500 cap"
+   },
+   {
+    "action": "SELL",
+    "ticker": "MSFT",
+    "shares": 1.546,
+    "price": 517.53,
+    "basis": 377.5,
+    "reason": "Take-profit: +37% and over cap"
+   },
+   {
+    "action": "SELL",
+    "ticker": "PLTR",
+    "shares": 5.579,
+    "price": 188.75,
+    "basis": 121.0,
+    "reason": "Take-profit: +56%, $2.1k position over cap"
+   },
+   {
+    "action": "BUY",
+    "ticker": "AMD",
+    "shares": 2.209,
+    "price": 633.91,
+    "reason": "New: near 52-wk high, chip sector breakout"
+   },
+   {
+    "action": "BUY",
+    "ticker": "AMZN",
+    "shares": 0.954,
+    "price": 251.52,
+    "reason": "Add winner, risk-on tech overweight"
+   },
+   {
+    "action": "BUY",
+    "ticker": "GOOGL",
+    "shares": 0.873,
+    "price": 343.5,
+    "reason": "Add, risk-on tech overweight"
+   },
+   {
+    "action": "BUY",
+    "ticker": "AAPL",
+    "shares": 0.42,
+    "price": 333.69,
+    "reason": "Add winner up to cap"
+   },
+   {
+    "action": "BUY",
+    "ticker": "SPCX",
+    "shares": 3.145,
+    "price": 158.96,
+    "reason": "Momentum: +7.4% on day"
+   }
+  ],
+  "scores": {
+   "NVDA": 2,
+   "AMZN": 2,
+   "GOOGL": 1,
+   "MSFT": 2,
+   "AAPL": 1,
+   "INTC": -1,
+   "UBER": -1,
+   "AMD": 3,
+   "LMT": 1,
+   "RTX": 1,
+   "PLTR": 2,
+   "SPCX": 2
+  },
+  "notes": "Risk-on: weak Sept jobs (+29k) cemented Fed hold; Nasdaq +1.2%. Run executed after close at closing prices."
+ },
+ "vault": 0.0,
+ "vault_next": 12500.0
+}
